@@ -44,6 +44,7 @@ class EscalonadorCAV(ABC):
         self.tarefas: list[TarefaCAV] = []
         self.menor_tarefa = None
         self.sobrecarga_total = 0  # Sobrecarga total acumulada
+        self.tempo_atual = 0
 
     def adicionar_tarefa(self, tarefa: TarefaCAV):
         """Adiciona uma tarefa (ação do CAV) à lista de tarefas"""
@@ -77,24 +78,24 @@ class EscalonadorFIFO(EscalonadorCAV):
         self.tarefas.sort(key=lambda tarefa: tarefa.tempo_chegada)
         
         if (len(self.tarefas) > 0):
-            tempo_atual = self.tarefas[0].tempo_chegada  # Inicializa o relógio da simulação
+            self.tempo_atual = self.tarefas[0].tempo_chegada  # Inicializa o relógio da simulação
             for tarefa in self.tarefas:
-                tarefa.tempo_inicio = max(tempo_atual, tarefa.tempo_chegada)
+                tarefa.tempo_inicio = max(self.tempo_atual, tarefa.tempo_chegada)
                 tarefa.tempo_inicio_execucao_atual = tarefa.tempo_inicio
                 
-                tempo_atual = tarefa.tempo_inicio
+                self.tempo_atual = tarefa.tempo_inicio
                 print(
-                    f"[{tempo_atual}s] Executando tarefa {tarefa.nome} de {tarefa.duracao} segundos. (chegada: {tarefa.tempo_chegada}s)")
+                    f"[{self.tempo_atual}s] Executando tarefa {tarefa.nome} de {tarefa.duracao} segundos. (chegada: {tarefa.tempo_chegada}s)")
                 time.sleep(tarefa.duracao / 10)  # Simula a execução da tarefa 10x mais rápido
-                tempo_atual += tarefa.duracao
+                self.tempo_atual += tarefa.duracao
                 
-                tarefa.tempo_final_execucao_atual = tempo_atual
-                tarefa.tempo_final = tempo_atual
+                tarefa.tempo_final_execucao_atual = self.tempo_atual
+                tarefa.tempo_final = self.tempo_atual
                 tarefa.tempo_em_espera = tarefa.tempo_inicio - tarefa.tempo_chegada
                 tarefa.tempo_de_resposta = tarefa.tempo_em_espera
                 # Registrando a sobrecarga, como exemplo, podemos adicionar um tempo fixo de sobrecarga
                 #self.registrar_sobrecarga(0.5)  # 0.5 segundos de sobrecarga por tarefa (simulando troca de contexto)
-                print(f"[{tempo_atual}s] Tarefa {tarefa.nome} finalizada.\n")
+                print(f"[{self.tempo_atual}s] Tarefa {tarefa.nome} finalizada.\n")
 
         self.exibir_sobrecarga()
 
@@ -110,21 +111,20 @@ class EscalonadorRoundRobin(EscalonadorCAV):
         """Escalonamento Round Robin com tarefas de CAVs"""
         self.tarefas.sort(key=lambda tarefa: tarefa.tempo_chegada)
         fila = deque(self.tarefas)
-        tempo_atual = 0 # Inicializa o relógio da simulação
         
         if (len(self.tarefas) > 0):
-            tempo_atual = self.tarefas[0].tempo_chegada
+            self.tempo_atual = self.tarefas[0].tempo_chegada
             
             while fila:
-                tarefas_que_chegaram = [tarefa for tarefa in fila if tarefa.tempo_chegada <= tempo_atual]
+                tarefas_que_chegaram = [tarefa for tarefa in fila if tarefa.tempo_chegada <= self.tempo_atual]
                 if (len(tarefas_que_chegaram) == 0):
-                    tempo_atual = math.ceil(tempo_atual + 1)
+                    self.tempo_atual = math.ceil(self.tempo_atual + 1)
                     continue
                 
                 tarefa = tarefas_que_chegaram[0]
                 fila.remove(tarefa)
                 if tarefa.tempo_restante > 0:
-                    tarefa.tempo_inicio_execucao_atual = max(tempo_atual, tarefa.tempo_chegada)
+                    tarefa.tempo_inicio_execucao_atual = max(self.tempo_atual, tarefa.tempo_chegada)
                     
                     tarefa.tempo_inicio = tarefa.tempo_inicio_execucao_atual if tarefa.tempo_inicio is None else tarefa.tempo_inicio
                     tempo_exec = min(tarefa.tempo_restante, self.quantum)
@@ -132,14 +132,14 @@ class EscalonadorRoundRobin(EscalonadorCAV):
                     tarefa.tempo_em_espera += tarefa.tempo_inicio_execucao_atual - tarefa.tempo_final_execucao_atual
                     
                     print(
-                        f"[{tempo_atual}s] Executando tarefa {tarefa.nome} de {tarefa.duracao} segundos por {tempo_exec} segundos. (chegada: {tarefa.tempo_chegada}s)")
+                        f"[{self.tempo_atual}s] Executando tarefa {tarefa.nome} de {tarefa.duracao} segundos por {tempo_exec} segundos. (chegada: {tarefa.tempo_chegada}s)")
                     
                     time.sleep(tempo_exec / 10)  # Simula a execução da tarefa 10x mais rapida
                     
                     
                     
-                    tempo_atual = tarefa.tempo_inicio_execucao_atual + tempo_exec
-                    tarefa.tempo_final_execucao_atual = tempo_atual
+                    self.tempo_atual = tarefa.tempo_inicio_execucao_atual + tempo_exec
+                    tarefa.tempo_final_execucao_atual = self.tempo_atual
                     tarefa.tempo_restante -= tempo_exec
                     
                     tarefa.tempo_de_resposta = tarefa.tempo_inicio - tarefa.tempo_chegada
@@ -149,11 +149,11 @@ class EscalonadorRoundRobin(EscalonadorCAV):
                     if tarefa.tempo_restante > 0:
                         # Registrando a sobrecarga, como exemplo, podemos adicionar um tempo fixo de sobrecarga
                         self.registrar_sobrecarga(0.3)  # 0.3 segundos de sobrecarga por tarefa
-                        tempo_atual += 0.3
+                        self.tempo_atual += 0.3
                         
                         if (fila):
                             for i in range(len(fila)):
-                                if (fila[i].tempo_chegada > tempo_atual):
+                                if (fila[i].tempo_chegada > self.tempo_atual):
                                     fila.insert(i, tarefa)
                                     break
                                 if (i == len(fila) - 1):
@@ -161,10 +161,10 @@ class EscalonadorRoundRobin(EscalonadorCAV):
                         else:
                             fila.append(tarefa)
                         
-                        print(f"[{tempo_atual}s] Tarefa {tarefa.nome} ainda pendente.\n")
+                        print(f"[{self.tempo_atual}s] Tarefa {tarefa.nome} ainda pendente.\n")
                     else: 
-                        tarefa.tempo_final = tempo_atual
-                        print(f"[{tempo_atual}s] Tarefa {tarefa.nome} finalizada.\n")
+                        tarefa.tempo_final = self.tempo_atual
+                        print(f"[{self.tempo_atual}s] Tarefa {tarefa.nome} finalizada.\n")
 
         self.exibir_sobrecarga()
 
@@ -182,11 +182,11 @@ class EscalonadorPrioridade(EscalonadorCAV):
         fila = deque(self.tarefas)
 
         if (len(self.tarefas) > 0):
-            tempo_atual = self.tarefas[0].tempo_chegada
+            self.tempo_atual = self.tarefas[0].tempo_chegada
             while (fila):
-                tarefas_que_chegaram = [tarefa for tarefa in fila if tarefa.tempo_chegada <= tempo_atual]
+                tarefas_que_chegaram = [tarefa for tarefa in fila if tarefa.tempo_chegada <= self.tempo_atual]
                 if (len(tarefas_que_chegaram) == 0):
-                    tempo_atual += 1
+                    self.tempo_atual += 1
                     continue
                 tarefas_que_chegaram.sort(key=lambda tarefa: tarefa.prioridade)
                 
@@ -194,21 +194,21 @@ class EscalonadorPrioridade(EscalonadorCAV):
                 fila.remove(tarefa)
                 
                 # Executando a tarefa
-                tarefa.tempo_inicio = tempo_atual
+                tarefa.tempo_inicio = self.tempo_atual
                 tarefa.tempo_inicio_execucao_atual = tarefa.tempo_inicio
                 
-                print(f"[{tempo_atual}s] Executando tarefa {tarefa.nome} de {tarefa.duracao} segundos com prioridade {tarefa.prioridade}. (chegada: {tarefa.tempo_chegada}s)")
+                print(f"[{self.tempo_atual}s] Executando tarefa {tarefa.nome} de {tarefa.duracao} segundos com prioridade {tarefa.prioridade}. (chegada: {tarefa.tempo_chegada}s)")
                 time.sleep(tarefa.duracao / 10)
                 
-                tempo_atual += tarefa.duracao
-                tarefa.tempo_final = tempo_atual
+                self.tempo_atual += tarefa.duracao
+                tarefa.tempo_final = self.tempo_atual
                 tarefa.tempo_de_resposta = tarefa.tempo_inicio - tarefa.tempo_chegada
                 tarefa.tempo_em_espera = tarefa.tempo_de_resposta
-                tarefa.tempo_final_execucao_atual = tempo_atual
+                tarefa.tempo_final_execucao_atual = self.tempo_atual
 
                 # Registrando a sobrecarga, como exemplo, podemos adicionar um tempo fixo de sobrecarga
                 # self.registrar_sobrecarga(0.4)  # 0.4 segundos de sobrecarga por tarefa
-                print(f"[{tempo_atual}s] Tarefa {tarefa.nome} finalizada.\n")
+                print(f"[{self.tempo_atual}s] Tarefa {tarefa.nome} finalizada.\n")
 
         self.exibir_sobrecarga()
 
