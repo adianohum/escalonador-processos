@@ -21,6 +21,7 @@ class TarefaCAV:
         self.tempo_chegada = tempo_chegada # Tempo de chegada
         self.sobrecarga = sobrecarga # Sobrecarga
         self.tempo_espera = 0 # Tempo de espera
+        self.quantum_anterior = 0
 
     def __str__(self):
         return f"Tarefa {self.nome} (Prioridade {self.prioridade}): {self.duracao} segundos"
