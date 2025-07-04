@@ -2,6 +2,7 @@ import random
 import time
 from collections import deque
 from abc import ABC, abstractmethod
+import math # Possivelmente utilizar funções como ceil, floor, round
 
 #Atual
 
@@ -9,13 +10,18 @@ from abc import ABC, abstractmethod
 # Este código fornece a base para que vocês experimentem e implementem suas próprias ideias de escalonamento, mantendo a estrutura flexível e fácil de estender.
 
 class TarefaCAV:
-    def __init__(self, nome, duracao, prioridade=1):
+    def __init__(self, nome, duracao, prioridade=1, deadline=1, tempo_chegada=0, sobrecarga=0):
         self.nome = nome            # Nome da tarefa (ex. Detecção de Obstáculo)
         self.duracao = duracao      # Tempo necessário para completar a tarefa (em segundos)
         self.prioridade = prioridade # Prioridade da tarefa (quanto menor o número, maior a prioridade)
         self.tempo_restante = duracao # Tempo restante para completar a tarefa
         self.tempo_inicio = 0       # Hora em que a tarefa começa
         self.tempo_final = 0        # Hora em que a tarefa termina
+        self.deadline = deadline #Deadline da tarefa
+        self.tempo_chegada = tempo_chegada # Tempo de chegada
+        self.sobrecarga = sobrecarga # Sobrecarga
+        self.tempo_espera = 0 # Tempo de espera
+        self.quantum_anterior = 0
 
     def __str__(self):
         return f"Tarefa {self.nome} (Prioridade {self.prioridade}): {self.duracao} segundos"
